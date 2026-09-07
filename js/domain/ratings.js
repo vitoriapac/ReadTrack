@@ -1,3 +1,4 @@
+import { requireValue } from "../utils/validation.js";
 import { store } from "../storage/storage.js";
 import { createId } from "../utils/ids.js";
 import { linkRating } from "./readings.js";
@@ -16,30 +17,37 @@ export function ratingForReading(readingId) {
  * Cria ou atualiza a avaliação de uma leitura.
  * Só a nota geral é obrigatória — o resto é opcional.
  */
-export function saveRating(readingId, { overall, favorite = false, review = "" }) {
-  const existing = ratingForReading(readingId);
+export function saveRating(readingId, { overall, favorite, review = "" }) {
+  favorite ??= ratingForReading(readingId)?.favorite ?? false;
+  overall = Number(overall);
+  requireValue(store.getState().readings[readingId]?.status === "completed", "Conclua a leitura antes de avaliar.");
+  requireValue(Number.isFinite(overall) && overall >= 1 && overall <= 5, "A nota deve estar entre 1 e 5.");
+  requireValue(typeof review === "string", "Resenha inválida.");
+  return store.mutate(() => {
+    const existing = ratingForReading(readingId);
 
-  if (existing) {
-    store.mutate((state) => {
-      const r = state.ratings[existing.id];
-      r.overall = overall;
-      r.favorite = favorite;
-      r.review = review;
-      r.updatedAt = new Date().toISOString();
-    });
-    return existing;
-  }
+    if (existing) {
+      store.mutate((state) => {
+        const r = state.ratings[existing.id];
+        r.overall = overall;
+        r.favorite = favorite;
+        r.review = review;
+        r.updatedAt = new Date().toISOString();
+      });
+      return existing;
+    }
 
-  const rating = {
-    id: createId("rt"),
-    readingId,
-    overall: Number(overall),
-    favorite: !!favorite,
-    review: review || "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  store.mutate((state) => { state.ratings[rating.id] = rating; });
-  linkRating(readingId, rating.id);
-  return rating;
+    const rating = {
+      id: createId("rt"),
+      readingId,
+      overall: Number(overall),
+      favorite: !!favorite,
+      review: review || "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    store.mutate((state) => { state.ratings[rating.id] = rating; });
+    linkRating(readingId, rating.id);
+    return rating;
+  });
 }

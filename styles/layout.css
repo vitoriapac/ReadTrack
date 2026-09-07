@@ -168,7 +168,8 @@
     justify-content: space-between;
   }
   .nav-group.is-primary { flex-direction: row; }
-  .sidebar-footer { display: none; }
+  .sidebar { flex-wrap: wrap; gap: var(--sp-4); }
+  .sidebar-footer { width: 100%; margin-top: 0; }
   .main { padding: var(--sp-5); }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .two-col { grid-template-columns: 1fr; }

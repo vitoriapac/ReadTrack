@@ -1,16 +1,17 @@
+import { escapeHTML as esc } from "../utils/html.js";
 import { icons } from "./icons.js";
-import { listBooks, getBook, authorNamesForBook, deleteBook } from "../domain/books.js";
+import { listBooks, listLibraryBooks, getBook, authorNamesForBook, canArchiveBook } from "../domain/books.js";
 import {
-  listReadingsByBook, openReadingForBook, STATUS, STATUS_LABELS, progressPercent,
-  pauseReading, resumeReading,
+  listReadings, STATUS, STATUS_LABELS, progressPercent,
 } from "../domain/readings.js";
 import { ratingForReading } from "../domain/ratings.js";
 import { formatStars } from "../utils/formatters.js";
-import {
-  openBookFormModal, openStartReadingModal, openProgressModal,
-  openCompleteFlow, openAbandonModal,
-} from "./modals.js";
+import { openBookFormModal } from "./modals.js";
+import { bookRoute } from "./routes.js";
+import { changeBookArchive, openDeleteBookModal } from "./book-actions.js";
+import { performReadingAction } from "./reading-actions.js";
 import { showToast } from "./toast.js";
+import { openHistoryModal } from "./history.js";
 
 const TABS = [
   { key: "all", label: "Todos" },
@@ -21,14 +22,13 @@ const TABS = [
   { key: STATUS.ABANDONED, label: "Abandonados" },
 ];
 
-let uiState = { tab: "all", query: "", sort: "recent" };
+let uiState = { tab: "all", query: "", sort: "recent", archived: false };
 let openMenuBookId = null;
+let disposeEvents = null;
+let readingIndex = new Map();
 
 function displayReadingForBook(bookId) {
-  const open = openReadingForBook(bookId);
-  if (open) return open;
-  const all = listReadingsByBook(bookId);
-  return all[0] || null;
+  return readingIndex.get(bookId) || null;
 }
 
 function sortBooks(books) {
@@ -79,21 +79,23 @@ function bookCardHTML(book) {
       ? `<div class="stars">${formatStars(rating.overall)}</div>`
       : `<button class="btn btn-secondary btn-sm book-quick-action" data-action="rate" data-reading="${reading.id}" data-book="${book.id}">Avaliar</button>`;
   } else if (status === STATUS.ABANDONED) {
-    bodyExtra = `<div class="text-faint" style="font-size: var(--fs-2xs);">${reading?.abandonReason || ""}</div>`;
+    bodyExtra = `<div class="text-faint" style="font-size: var(--fs-2xs);">${esc(reading?.abandonReason || "")}</div>`;
   }
+
+  if (book.archivedAt) bodyExtra = '<p class="field-hint">Histórico preservado.</p>';
 
   return `
     <div class="book-card" data-book-card="${book.id}">
       <div class="book-cover">
-        ${book.cover ? `<img src="${book.cover}" alt="Capa de ${book.title}" />` : initials}
+        ${book.cover ? `<img src="${esc(book.cover)}" alt="Capa de ${esc(book.title)}" />` : initials}
       </div>
       <div class="book-card-body">
-        <div class="badge badge-${status}">${STATUS_LABELS[status]}</div>
-        <div class="book-card-title">${book.title}</div>
-        <div class="book-card-author">${authorNames}</div>
+        <div class="badge badge-${status}">${book.archivedAt ? "Arquivado · " : ""}${STATUS_LABELS[status]}</div>
+        <a class="book-card-title" href="${bookRoute(book.id)}">${esc(book.title)}</a>
+        <div class="book-card-author">${esc(authorNames)}</div>
         ${bodyExtra}
         <div class="book-card-meta">
-          <span class="text-faint" style="font-size: var(--fs-2xs);">${book.pages} pág. · ${book.genre}</span>
+          <span class="text-faint" style="font-size: var(--fs-2xs);">${book.pages} pág. · ${esc(book.genre)}</span>
           <div class="menu-wrap">
             <button class="btn-icon" data-menu-toggle="${book.id}" aria-label="Mais ações">${icons.kebab}</button>
             ${openMenuBookId === book.id ? menuHTML(book, reading, status) : ""}
@@ -106,6 +108,8 @@ function bookCardHTML(book) {
 
 function menuHTML(book, reading, status) {
   const items = [];
+  items.push(`<button data-action="history" data-book="${book.id}">Histórico e correções</button>`);
+  if (!book.archivedAt) {
   if (status === STATUS.READING || status === STATUS.PAUSED) {
     items.push(`<button data-action="progress" data-reading="${reading.id}" data-book="${book.id}">Registrar progresso</button>`);
     if (status === STATUS.READING) {
@@ -120,13 +124,23 @@ function menuHTML(book, reading, status) {
   } else if (status === STATUS.COMPLETED || status === STATUS.ABANDONED) {
     items.push(`<button data-action="reread" data-book="${book.id}">Ler novamente</button>`);
   }
+  }
+  items.push(`<button data-action="archive" data-book="${book.id}" ${!book.archivedAt && !canArchiveBook(book.id) ? 'disabled title="Conclua ou abandone a leitura antes de arquivar"' : ""}>${book.archivedAt ? "Restaurar livro" : "Arquivar livro"}</button>`);
   items.push(`<button data-action="edit" data-book="${book.id}">Editar livro</button>`);
   items.push(`<button class="danger" data-action="delete" data-book="${book.id}">Excluir livro</button>`);
   return `<div class="menu-pop" data-menu="${book.id}">${items.join("")}</div>`;
 }
 
 export function renderLibraryPage(container) {
-  const allBooks = listBooks();
+  disposeEvents?.();
+  const allBooks = listLibraryBooks({ archived: uiState.archived });
+  readingIndex = new Map();
+  const readings = listReadings().sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  for (const reading of readings) {
+    const previous = readingIndex.get(reading.bookId);
+    const isOpen = r => ![STATUS.COMPLETED, STATUS.ABANDONED].includes(r.status);
+    if (!previous || (!isOpen(previous) && isOpen(reading))) readingIndex.set(reading.bookId, reading);
+  }
 
   const filtered = allBooks.filter((b) => {
     const reading = displayReadingForBook(b.id);
@@ -157,6 +171,10 @@ export function renderLibraryPage(container) {
     </div>
 
     <div class="library-controls">
+      <div class="archive-filter" role="group" aria-label="Visibilidade dos livros">
+        <button class="btn ${uiState.archived ? "btn-secondary" : "btn-primary"}" data-scope="active" aria-pressed="${!uiState.archived}">Ativos (${listLibraryBooks().length})</button>
+        <button class="btn ${uiState.archived ? "btn-primary" : "btn-secondary"}" data-scope="archived" aria-pressed="${uiState.archived}">Arquivados (${listLibraryBooks({ archived: true }).length})</button>
+      </div>
       <div class="tab-bar">
         ${TABS.map((t) => `
           <button class="tab-item ${uiState.tab === t.key ? "is-active" : ""}" data-tab="${t.key}">
@@ -167,7 +185,7 @@ export function renderLibraryPage(container) {
       <div class="toolbar">
         <div class="search-field">
           ${icons.search}
-          <input type="text" id="library-search" placeholder="Pesquisar por título ou autor..." value="${uiState.query}" />
+          <input type="text" id="library-search" placeholder="Pesquisar por título ou autor..." value="${esc(uiState.query)}" />
         </div>
         <select class="select-field" id="library-sort">
           <option value="recent" ${uiState.sort === "recent" ? "selected" : ""}>Adicionados recentemente</option>
@@ -178,10 +196,11 @@ export function renderLibraryPage(container) {
       </div>
     </div>
 
-    ${sorted.length === 0 ? emptyStateHTML(allBooks.length === 0) : `<div class="book-grid">${sorted.map(bookCardHTML).join("")}</div>`}
+    ${sorted.length === 0 ? emptyStateHTML(listBooks().length === 0) : `<div class="book-grid">${sorted.map(bookCardHTML).join("")}</div>`}
   `;
 
-  wireLibraryEvents(container);
+  disposeEvents = wireLibraryEvents(container);
+  return () => { disposeEvents?.(); openMenuBookId = null; };
 }
 
 function emptyStateHTML(isFullyEmpty) {
@@ -203,107 +222,71 @@ function emptyStateHTML(isFullyEmpty) {
 }
 
 function wireLibraryEvents(container) {
-  container.querySelector("#btn-add-book")?.addEventListener("click", () => openBookFormModal());
-  container.querySelector("#btn-add-book-empty")?.addEventListener("click", () => openBookFormModal());
-
-  container.querySelectorAll("[data-tab]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      uiState.tab = btn.dataset.tab;
-      openMenuBookId = null;
+  const events = new AbortController();
+  const on = (target, type, fn) => target?.addEventListener(type, fn, { signal: events.signal });
+  on(container, "click", event => {
+    const button = event.target.closest("button");
+    if (!button || !container.contains(button)) return;
+    if (button.id === "btn-add-book" || button.id === "btn-add-book-empty") { openBookFormModal(); return; }
+    if (button.dataset.scope) {
+      uiState.archived = button.dataset.scope === "archived";
+      uiState.tab = "all"; uiState.query = ""; openMenuBookId = null;
+      renderLibraryPage(container); return;
+    }
+    if (button.dataset.tab) {
+      uiState.tab = button.dataset.tab; openMenuBookId = null;
+      renderLibraryPage(container); return;
+    }
+    if (button.dataset.menuToggle) {
+      event.stopPropagation();
+      openMenuBookId = openMenuBookId === button.dataset.menuToggle ? null : button.dataset.menuToggle;
       renderLibraryPage(container);
-    });
-  });
-
-  const searchInput = container.querySelector("#library-search");
-  searchInput?.addEventListener("input", (e) => {
-    uiState.query = e.target.value;
-    const caret = e.target.selectionStart;
-    renderLibraryPage(container);
-    const again = container.querySelector("#library-search");
-    if (again) {
-      again.focus();
-      again.setSelectionRange(caret, caret);
+      container.querySelector(`[data-menu-toggle="${button.dataset.menuToggle}"]`)?.focus();
+      return;
+    }
+    if (button.dataset.action) {
+      event.stopPropagation();
+      try { handleAction(button.dataset.action, button.dataset); }
+      catch (error) { showToast(error.message, { duration: 6000 }); }
     }
   });
-
-  container.querySelector("#library-sort")?.addEventListener("change", (e) => {
-    uiState.sort = e.target.value;
+  on(container.querySelector("#library-search"), "input", event => {
+    uiState.query = event.target.value;
+    const caret = event.target.selectionStart;
     renderLibraryPage(container);
+    const input = container.querySelector("#library-search");
+    input.focus(); input.setSelectionRange(caret, caret);
   });
-
-  container.querySelectorAll("[data-menu-toggle]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.menuToggle;
-      openMenuBookId = openMenuBookId === id ? null : id;
-      renderLibraryPage(container);
-    });
+  on(container.querySelector("#library-sort"), "change", event => {
+    uiState.sort = event.target.value;
+    renderLibraryPage(container);
+    container.querySelector("#library-sort")?.focus();
   });
-
-  document.addEventListener("click", () => {
-    if (openMenuBookId !== null) {
-      openMenuBookId = null;
-      renderLibraryPage(container);
+  const dismissMenu = () => {
+    if (openMenuBookId === null) return;
+    const id = openMenuBookId;
+    openMenuBookId = null; renderLibraryPage(container);
+    return id;
+  };
+  on(document, "click", event => {
+    if (!event.target.closest(".menu-wrap")) dismissMenu();
+  });
+  on(document, "keydown", event => {
+    if (event.key === "Escape" && openMenuBookId !== null) {
+      const id = dismissMenu();
+      container.querySelector(`[data-menu-toggle="${id}"]`)?.focus();
     }
-  }, { once: true });
-
-  container.querySelectorAll("[data-action]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      handleAction(btn.dataset.action, btn.dataset);
-    });
   });
+  return () => events.abort();
 }
 
 function handleAction(action, data) {
   const book = data.book ? getBook(data.book) : null;
-
-  switch (action) {
-    case "start": {
-      const full = data.reading ? { id: data.reading } : null;
-      openStartReadingModal(book, full);
-      break;
-    }
-    case "reread": {
-      openStartReadingModal(book, null);
-      break;
-    }
-    case "progress": {
-      const full = displayReadingForBook(book.id);
-      openProgressModal(book, full);
-      break;
-    }
-    case "pause":
-      pauseReading(data.reading);
-      showToast("Leitura pausada.");
-      break;
-    case "resume":
-      resumeReading(data.reading);
-      showToast("Leitura retomada.");
-      break;
-    case "complete": {
-      const full = displayReadingForBook(book.id);
-      openCompleteFlow(book, full);
-      break;
-    }
-    case "rate": {
-      const full = displayReadingForBook(book.id);
-      openCompleteFlow(book, full);
-      break;
-    }
-    case "abandon": {
-      const full = displayReadingForBook(book.id);
-      openAbandonModal(book, full);
-      break;
-    }
-    case "edit":
-      openBookFormModal(book.id);
-      break;
-    case "delete":
-      if (confirm(`Excluir "${book.title}"? Isso também remove seu histórico de leitura.`)) {
-        deleteBook(book.id);
-        showToast("Livro excluído.");
-      }
-      break;
-  }
+  if (action === "history") { openHistoryModal(book); return; }
+  if (action === "edit") { openBookFormModal(book.id); return; }
+  if (action === "archive") { changeBookArchive(book); return; }
+  if (action === "delete") { openDeleteBookModal(book); return; }
+  // Pause/resume buttons used to omit the book id; resolve the reading directly.
+  const reading = listReadings().find(r => r.id === data.reading) || (book ? displayReadingForBook(book.id) : null);
+  performReadingAction(action, book || getBook(reading?.bookId), reading);
 }

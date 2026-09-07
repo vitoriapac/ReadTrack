@@ -1,3 +1,5 @@
+import { nextSequence, sessionDate } from "../services/history.js";
+import { requireValue, pageNumber, validDate } from "../utils/validation.js";
 import { store } from "../storage/storage.js";
 import { createId } from "../utils/ids.js";
 import { todayISO } from "../utils/dates.js";
@@ -39,6 +41,7 @@ export function getReading(id) {
 export function listReadingsByBook(bookId) {
   return listReadings()
     .filter((r) => r.bookId === bookId)
+    .reverse() // Em empates de timestamp, a leitura inserida por último vem primeiro.
     .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 }
 
@@ -56,6 +59,10 @@ export function listByStatus(status) {
 }
 
 export function addToWantToRead(bookId) {
+  requireValue(getBook(bookId), "Livro não encontrado.");
+  requireValue(!getBook(bookId).archivedAt, "Restaure o livro antes de iniciar uma leitura.");
+  const existing = openReadingForBook(bookId);
+  if (existing) return existing;
   const reading = {
     id: createId("rd"),
     bookId,
@@ -76,7 +83,15 @@ export function addToWantToRead(bookId) {
 
 /** Inicia uma leitura nova (ou promove um "quero ler" existente). */
 export function startReading(bookId, { initialPage = 0, startedAt = todayISO(), fromReadingId = null } = {}) {
-  let reading = fromReadingId ? getReading(fromReadingId) : null;
+  const book = getBook(bookId);
+  requireValue(book, "Livro não encontrado.");
+  requireValue(!book.archivedAt, "Restaure o livro antes de iniciar uma leitura.");
+  initialPage = pageNumber(initialPage, book.pages);
+  validDate(startedAt);
+  let reading = fromReadingId ? getReading(fromReadingId) : openReadingForBook(bookId);
+  requireValue(!fromReadingId || reading, "Leitura não encontrada.");
+  requireValue(!reading || (reading.bookId === bookId && reading.status === STATUS.WANT_TO_READ), "Já existe uma leitura aberta ou a leitura não pode ser iniciada.");
+  requireValue(!openReadingForBook(bookId) || openReadingForBook(bookId).id === reading?.id, "Já existe uma leitura aberta.");
 
   if (!reading) {
     reading = {
@@ -115,15 +130,20 @@ export function startReading(bookId, { initialPage = 0, startedAt = todayISO(), 
  */
 export function logProgress(readingId, { currentPage, date = todayISO(), notes = "" }) {
   const reading = getReading(readingId);
-  if (!reading) return null;
-
-  const newPage = Math.max(0, Number(currentPage) || 0);
+  requireValue(reading && [STATUS.READING, STATUS.PAUSED].includes(reading.status), "A leitura precisa estar em andamento.");
+  sessionDate(date, reading);
+  requireValue(typeof notes === "string", "Notas inválidas.");
+  const newPage = pageNumber(currentPage, getBook(reading.bookId).pages);
+  requireValue(newPage > reading.currentPage, "A página deve ser maior que a última registrada.");
   const previousPage = reading.currentPage;
   const pagesRead = newPage - previousPage;
 
   const session = {
     id: createId("ses"),
     readingId,
+    type: "reading",
+    sequence: nextSequence(store.getState(), readingId),
+    revisions: [],
     date,
     startPage: previousPage,
     endPage: newPage,
@@ -145,6 +165,7 @@ export function logProgress(readingId, { currentPage, date = todayISO(), notes =
 }
 
 export function pauseReading(readingId) {
+  requireValue(getReading(readingId)?.status === STATUS.READING, "Só é possível pausar uma leitura em andamento.");
   store.mutate((state) => {
     const r = state.readings[readingId];
     if (!r) return;
@@ -154,6 +175,7 @@ export function pauseReading(readingId) {
 }
 
 export function resumeReading(readingId) {
+  requireValue(getReading(readingId)?.status === STATUS.PAUSED, "Só é possível retomar uma leitura pausada.");
   store.mutate((state) => {
     const r = state.readings[readingId];
     if (!r) return;
@@ -163,6 +185,7 @@ export function resumeReading(readingId) {
 }
 
 export function abandonReading(readingId, reason = null) {
+  requireValue([STATUS.READING, STATUS.PAUSED].includes(getReading(readingId)?.status), "A leitura precisa estar em andamento.");
   store.mutate((state) => {
     const r = state.readings[readingId];
     if (!r) return;
@@ -174,10 +197,15 @@ export function abandonReading(readingId, reason = null) {
 
 /** Marca a leitura como concluída. A avaliação (se houver) é criada à parte. */
 export function completeReading(readingId, { finishedAt = todayISO() } = {}) {
+  const reading = getReading(readingId);
+  requireValue(reading && [STATUS.READING, STATUS.PAUSED].includes(reading.status), "A leitura precisa estar em andamento.");
+  const lastDate = Object.values(store.getState().sessions).filter(s => s.readingId === readingId).reduce((last, s) => s.date > last ? s.date : last, reading.startedAt);
+  validDate(finishedAt, lastDate);
   store.mutate((state) => {
     const r = state.readings[readingId];
     if (!r) return;
     const book = state.books[r.bookId];
+    if (r.currentPage < book.pages) logProgress(readingId, { currentPage: book.pages, date: finishedAt });
     r.status = STATUS.COMPLETED;
     r.finishedAt = finishedAt;
     if (book?.pages) r.currentPage = book.pages;
@@ -186,6 +214,7 @@ export function completeReading(readingId, { finishedAt = todayISO() } = {}) {
 }
 
 export function linkRating(readingId, ratingId) {
+  requireValue(getReading(readingId) && store.getState().ratings[ratingId]?.readingId === readingId, "Vínculo de avaliação inválido.");
   store.mutate((state) => {
     const r = state.readings[readingId];
     if (r) r.ratingId = ratingId;

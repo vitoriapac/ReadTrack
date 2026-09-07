@@ -1,65 +1,63 @@
 import { CURRENT_VERSION, migrate, emptyState } from "./migrations.js";
-
+import { validateState } from "./schema.js";
 const STORAGE_KEY = "readtrack:data";
 
-/**
- * Store simples com persistência em localStorage e pub/sub para a UI.
- * O estado inteiro fica em memória e é regravado no localStorage a
- * cada mutação — suficiente para o volume de dados de uma biblioteca
- * pessoal de livros.
- */
-class Store {
-  constructor() {
-    this.state = this._load();
+export class Store {
+  constructor(storage) {
     this.listeners = new Set();
-  }
-
-  _load() {
+    this.loadError = null;
+    this.rawBackup = null;
+    this.draft = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return emptyState();
-      const parsed = JSON.parse(raw);
-      return migrate(parsed);
-    } catch (err) {
-      console.error("ReadTrack: falha ao ler dados salvos, iniciando vazio.", err);
-      return emptyState();
+      storage ??= globalThis.localStorage;
+      this.storage = storage;
+      this.rawBackup = storage.getItem(STORAGE_KEY);
+      this.state = this.rawBackup === null ? emptyState() : migrate(JSON.parse(this.rawBackup));
+    } catch {
+      this.loadError = "Não foi possível abrir os dados salvos. Exporte o arquivo original e restaure um backup válido para voltar a salvar.";
+      this.state = emptyState();
     }
   }
-
-  _persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-    } catch (err) {
-      console.error("ReadTrack: falha ao salvar dados.", err);
-    }
-    this.listeners.forEach((fn) => fn(this.state));
-  }
-
   subscribe(fn) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
-
-  getState() {
-    return this.state;
+  getState() { return this.draft || this.state; }
+  _commit(next) {
+    try {
+      if (this.storage.getItem(STORAGE_KEY) !== this.rawBackup) {
+        throw new Error("Os dados foram alterados em outra aba. Recarregue a página antes de continuar.");
+      }
+      const raw = JSON.stringify(next);
+      this.storage.setItem(STORAGE_KEY, raw);
+      this.rawBackup = raw;
+    } catch (error) {
+      throw new Error(error.message.includes("outra aba") ? error.message : "Não foi possível salvar. Verifique o espaço e as permissões do navegador; nenhuma alteração foi aplicada.");
+    }
+    this.state = next;
+    this.loadError = null;
+    this.listeners.forEach((fn) => fn(this.state));
   }
-
-  /** Aplica uma função de mutação (recebe o state e edita in-place) e persiste. */
+  // Uma operação composta usa um rascunho, uma gravação e uma notificação.
   mutate(fn) {
-    fn(this.state);
-    this.state.meta.updatedAt = new Date().toISOString();
-    this._persist();
+    if (this.loadError) throw new Error(this.loadError);
+    if (this.draft) return fn(this.draft);
+    this.draft = structuredClone(this.state);
+    let next, result;
+    try {
+      result = fn(this.draft);
+      this.draft.meta.updatedAt = new Date().toISOString();
+      next = validateState(this.draft, CURRENT_VERSION);
+    } finally { this.draft = null; }
+    this._commit(next);
+    return result;
   }
-
   replaceAll(newState) {
-    this.state = migrate(newState);
-    this._persist();
+    const next = migrate(newState);
+    next.meta.updatedAt = new Date().toISOString();
+    this._commit(next);
   }
-
-  exportJSON() {
-    return JSON.stringify(this.state, null, 2);
-  }
+  exportJSON() { return this.loadError && this.rawBackup !== null ? this.rawBackup : JSON.stringify(this.state, null, 2); }
 }
-
 export const store = new Store();
 export { CURRENT_VERSION };

@@ -4,6 +4,8 @@ function ensureContainer() {
   if (!container) {
     container = document.createElement("div");
     container.className = "toast-stack";
+    container.setAttribute("role", "status");
+    container.setAttribute("aria-live", "polite");
     document.body.appendChild(container);
   }
   return container;

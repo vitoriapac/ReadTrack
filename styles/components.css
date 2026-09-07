@@ -200,7 +200,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   transition: box-shadow var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
@@ -208,6 +208,8 @@
 .book-card:hover { box-shadow: var(--shadow-md); border-color: var(--wine-300); }
 
 .book-cover {
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   aspect-ratio: 3 / 4;
   background: linear-gradient(155deg, var(--wine-150), var(--paper-200));
   display: flex;
@@ -344,6 +346,16 @@
   box-shadow: var(--shadow-lg);
   animation: modal-in var(--dur-base) var(--ease);
 }
+
+.history-form, .history-reading { display: grid; gap: var(--sp-3); }
+.history-reading { border-top: 1px solid var(--color-border); padding-top: var(--sp-4); }
+.history-entry { padding: var(--sp-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); display: grid; gap: var(--sp-2); }
+.history-note { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-sm); }
+.history-entry summary { cursor: pointer; }
+.backup-summary { margin: 0; }
+.backup-summary > div { display: flex; justify-content: space-between; gap: var(--sp-3); }
+.backup-summary dd { margin: 0; }
+button:disabled { opacity: .5; cursor: not-allowed; }
 @keyframes modal-in {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }

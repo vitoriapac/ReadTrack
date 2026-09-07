@@ -1,3 +1,5 @@
+import { escapeHTML as esc } from "../utils/html.js";
+import { bookRoute } from "./routes.js";
 import { icons } from "./icons.js";
 import { getBook, authorNamesForBook } from "../domain/books.js";
 import { listByStatus, STATUS, progressPercent } from "../domain/readings.js";
@@ -20,8 +22,8 @@ function buildActivityFeed(limit = 8) {
     events.push({
       date: s.date,
       sortKey: s.createdAt,
-      html: `<b>${book.title}</b>`,
-      delta: s.pagesRead >= 0 ? `+${s.pagesRead} pág.` : `${s.pagesRead} pág.`,
+      html: `<b>${esc(book.title)}</b>`,
+      delta: s.type === "position" ? "Voltou para reler" : `${s.pagesRead} pág.${s.revisions.length ? " (corrigido)" : ""}`,
     });
   });
 
@@ -29,19 +31,19 @@ function buildActivityFeed(limit = 8) {
     const book = getBook(r.bookId);
     if (!book) return;
     if (r.startedAt) {
-      events.push({ date: r.startedAt, sortKey: `${r.startedAt}T00:00:00.001`, html: `<b>${book.title}</b>`, delta: "Iniciado" });
+      events.push({ date: r.startedAt, sortKey: `${r.startedAt}T00:00:00.001`, html: `<b>${esc(book.title)}</b>`, delta: "Iniciado" });
     }
     if (r.status === STATUS.COMPLETED && r.finishedAt) {
       const rating = ratingForReading(r.id);
       events.push({
         date: r.finishedAt,
         sortKey: `${r.finishedAt}T23:59:59.997`,
-        html: `<b>${book.title}</b>`,
+        html: `<b>${esc(book.title)}</b>`,
         delta: rating ? `Concluído ${formatStars(rating.overall)}` : "Concluído",
       });
     }
     if (r.status === STATUS.ABANDONED) {
-      events.push({ date: r.updatedAt?.slice(0, 10), sortKey: r.updatedAt, html: `<b>${book.title}</b>`, delta: "Abandonado" });
+      events.push({ date: r.updatedAt?.slice(0, 10), sortKey: r.updatedAt, html: `<b>${esc(book.title)}</b>`, delta: "Abandonado" });
     }
   });
 
@@ -70,15 +72,16 @@ export function renderDashboardPage(container) {
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-value">${formatNumber(stats.booksCompleted)}</div>
-        <div class="kpi-label">Livros lidos</div>
+        <div class="kpi-label">Leituras concluídas</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-value">${formatNumber(stats.pagesRead)}</div>
-        <div class="kpi-label">Páginas</div>
+        <div class="kpi-label">Páginas lidas</div>
+        ${stats.undatedPages ? `<div class="field-hint">Inclui ${stats.undatedPages} páginas antigas sem data conhecida.</div>` : ""}
       </div>
       <div class="kpi-card">
         <div class="kpi-value">${formatNumber(stats.distinctAuthors)}</div>
-        <div class="kpi-label">Autores</div>
+        <div class="kpi-label">Autores lidos</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-value">${stats.avgRating ? stats.avgRating.toFixed(1) : "—"}</div>
@@ -112,10 +115,10 @@ function readingRowHTML(r) {
   const pct = progressPercent(r, book);
   return `
     <div class="reading-row">
-      <div class="reading-cover">${book.cover ? `<img src="${book.cover}" alt="" />` : book.title.slice(0, 1).toUpperCase()}</div>
+      <div class="reading-cover">${book.cover ? `<img src="${esc(book.cover)}" alt="" />` : book.title.slice(0, 1).toUpperCase()}</div>
       <div class="reading-info">
-        <div class="reading-title">${book.title}</div>
-        <div class="reading-author">${authorNamesForBook(book)}</div>
+        <a class="reading-title" href="${bookRoute(book.id)}">${esc(book.title)}</a>
+        <div class="reading-author">${esc(authorNamesForBook(book))}</div>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
         <div class="reading-progress-line">
           <span>${r.currentPage} / ${book.pages} páginas</span>

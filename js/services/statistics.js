@@ -1,15 +1,14 @@
 import { listBooks, getBook } from "../domain/books.js";
 import { listReadings, STATUS } from "../domain/readings.js";
 import { ratingForReading } from "../domain/ratings.js";
+import { store } from "../storage/storage.js";
+import { readingVolume } from "./history.js";
 
 /** KPIs simples de todo o histórico (a base para metas/projeções virá depois). */
 export function computeOverviewStats() {
   const completed = listReadings().filter((r) => r.status === STATUS.COMPLETED);
 
-  const pagesRead = completed.reduce((sum, r) => {
-    const book = getBook(r.bookId);
-    return sum + (book?.pages || 0);
-  }, 0);
+  const { pagesRead, undatedPages } = readingVolume(store.getState());
 
   const authorIds = new Set();
   completed.forEach((r) => {
@@ -27,6 +26,7 @@ export function computeOverviewStats() {
   return {
     booksCompleted: completed.length,
     pagesRead,
+    undatedPages,
     distinctAuthors: authorIds.size,
     avgRating,
     totalBooksInLibrary: listBooks().length,
