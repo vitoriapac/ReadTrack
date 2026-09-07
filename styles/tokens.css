@@ -1,0 +1,102 @@
+/* ===================================================================
+   ReadTrack — Design Tokens
+   Paleta: tons de vinho, sobre um fundo claro e quente (papel).
+   Tipografia: serifada (Fraunces) para números e títulos com
+   personalidade de "livro"; sans (Inter) para UI e corpo de texto.
+   =================================================================== */
+
+:root {
+  /* ---- Cor: base ---- */
+  --wine-950: #2c1015;
+  --wine-900: #3c1620;
+  --wine-800: #5a1f2c;
+  --wine-700: #7b2d3e;   /* acento principal */
+  --wine-600: #96384a;
+  --wine-500: #a94456;   /* acento secundário / hover */
+  --wine-300: #d79aa8;
+  --wine-150: #f1dde1;   /* fundo suave de badges/realces */
+  --wine-100: #f7ebee;
+
+  --paper-50: #fdfbf9;
+  --paper-100: #faf6f3;  /* fundo da aplicação */
+  --paper-200: #f3ebe6;
+  --paper-300: #e8d9d4;  /* bordas */
+
+  --ink-900: #2b1518;    /* texto principal */
+  --ink-700: #55393d;
+  --ink-500: #7a5b5e;    /* texto secundário */
+  --ink-300: #a68d8f;
+
+  --white: #ffffff;
+
+  /* ---- Cor: estados ---- */
+  --success: #3f6b4f;
+  --success-bg: #e6efe8;
+  --warning: #9c6b1f;
+  --warning-bg: #f6ecda;
+  --danger: #963530;
+  --danger-bg: #f5e2e0;
+
+  /* ---- Cor: papéis semânticos ---- */
+  --color-bg: var(--paper-100);
+  --color-surface: var(--white);
+  --color-surface-sunken: var(--paper-200);
+  --color-border: var(--paper-300);
+  --color-text: var(--ink-900);
+  --color-text-muted: var(--ink-500);
+  --color-text-faint: var(--ink-300);
+  --color-accent: var(--wine-700);
+  --color-accent-hover: var(--wine-800);
+  --color-accent-soft: var(--wine-150);
+  --color-accent-soft-text: var(--wine-800);
+  --color-focus: var(--wine-500);
+
+  /* ---- Tipografia ---- */
+  --font-display: "Fraunces", "Iowan Old Style", ui-serif, Georgia, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --fs-2xs: 0.6875rem;   /* 11px */
+  --fs-xs: 0.75rem;      /* 12px */
+  --fs-sm: 0.8125rem;    /* 13px */
+  --fs-base: 0.9375rem;  /* 15px */
+  --fs-md: 1.0625rem;    /* 17px */
+  --fs-lg: 1.25rem;      /* 20px */
+  --fs-xl: 1.625rem;     /* 26px */
+  --fs-2xl: 2.25rem;     /* 36px */
+  --fs-3xl: 3rem;        /* 48px */
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.55;
+
+  /* ---- Espaçamento ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 56px;
+  --sp-10: 72px;
+
+  /* ---- Raio e sombra ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(44, 16, 21, 0.06);
+  --shadow-md: 0 4px 16px rgba(44, 16, 21, 0.08);
+  --shadow-lg: 0 12px 32px rgba(44, 16, 21, 0.12);
+
+  /* ---- Layout ---- */
+  --sidebar-width: 232px;
+  --content-max-width: 1080px;
+
+  /* ---- Transições ---- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+}

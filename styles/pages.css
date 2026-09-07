@@ -1,0 +1,36 @@
+/* ===================================================================
+   ReadTrack — Ajustes específicos de página
+   =================================================================== */
+
+/* ---- Dashboard ---- */
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  margin-bottom: var(--sp-4);
+}
+
+.reading-now-list { display: flex; flex-direction: column; }
+
+/* ---- Biblioteca ---- */
+.library-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.book-progress-mini {
+  font-size: var(--fs-2xs);
+  color: var(--color-text-muted);
+}
+
+/* Botão de página seguinte no fluxo de leitura, dentro do card */
+.book-quick-action {
+  width: 100%;
+  margin-top: var(--sp-2);
+}
+
+@media (max-width: 640px) {
+  .field-row { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
