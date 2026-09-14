@@ -6,7 +6,7 @@ import { showToast } from "./toast.js";
 
 export function openBackupPreview(prepared, filename) {
   const expectedJSON = store.exportJSON();
-  const labels = { books: "Livros", authors: "Autores", readings: "Leituras", sessions: "Registros (incluindo saldos)", ratings: "Avaliações" };
+  const labels = { books: "Livros", authors: "Autores", readings: "Leituras", sessions: "Registros (incluindo saldos)", ratings: "Avaliações", goals: "Metas", annotations: "Anotações" };
   openModal({
     title: "Revisar restauração",
     bodyHTML: `<p>${esc(filename)}</p>

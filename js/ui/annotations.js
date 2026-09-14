@@ -1,0 +1,16 @@
+import { listAnnotations, createAnnotation, updateAnnotation, deleteAnnotation } from "../domain/annotations.js";
+import { store } from "../storage/storage.js";
+import { escapeHTML as esc } from "../utils/html.js";
+import { openModal, closeModal } from "./dialog.js";
+export function annotationsHTML(bookId) {
+  return `<section class="card" id="annotations"><div class="card-head"><h2>Anotações e citações</h2><button class="btn btn-primary" data-note="new">Nova anotação</button></div><div class="field"><label for="note-search">Buscar neste livro</label><input id="note-search" type="search" /></div>${listAnnotations(bookId).map(a=>`<article class="history-entry" data-note-row><p>${a.type === "quote" ? "Citação" : "Nota"}${a.page != null ? ` · página ${a.page}` : ""} · ${a.createdAt.slice(0,10)}</p><p class="history-note">${esc(a.text)}</p><div class="detail-actions"><button class="btn btn-secondary" data-note="${a.id}">Editar</button><button class="btn btn-danger-ghost" data-delete-note="${a.id}">Excluir</button></div></article>`).join("") || "<p>Nenhuma anotação neste livro.</p>"}</section>`;
+}
+function openNote(bookId, id) {
+  const a = id ? store.getState().annotations[id] : null;
+  openModal({title: a ? "Editar anotação" : "Nova anotação", bodyHTML: `<form id="note-form" class="history-form"><div class="field"><label for="note-type">Tipo</label><select id="note-type" name="type"><option value="note">Nota</option><option value="quote" ${a?.type === "quote" ? "selected" : ""}>Citação</option></select></div><div class="field"><label for="note-page">Página (opcional)</label><input id="note-page" name="page" type="number" min="0" max="${store.getState().books[bookId].pages}" value="${a?.page ?? ""}" /></div><div class="field"><label for="note-text">Texto</label><textarea id="note-text" name="text" required>${esc(a?.text||"")}</textarea></div><p id="note-error" role="alert"></p></form>`,footHTML:'<button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-primary" form="note-form">Salvar</button>',onMount(el){el.querySelector("form").addEventListener("submit",event=>{event.preventDefault();try{const data=Object.fromEntries(new FormData(event.target));if(a)updateAnnotation(a.id,data);else createAnnotation({...data,bookId});closeModal();}catch(error){el.querySelector("#note-error").textContent=error.message;}});}});
+}
+export function wireAnnotations(container,bookId) {
+  container.querySelectorAll("[data-note]").forEach(b=>b.addEventListener("click",()=>openNote(bookId,b.dataset.note==="new"?null:b.dataset.note)));
+  container.querySelectorAll("[data-delete-note]").forEach(b=>b.addEventListener("click",()=>openModal({title:"Excluir anotação",bodyHTML:"<p>A anotação será removida permanentemente.</p>",footHTML:'<button class="btn btn-secondary" data-close>Cancelar</button><button class="btn btn-danger-ghost" id="delete-note">Excluir</button>',onMount(el){el.querySelector("#delete-note").addEventListener("click",()=>{deleteAnnotation(b.dataset.deleteNote);closeModal();});}})));
+  container.querySelector("#note-search")?.addEventListener("input",event=>{const q=event.target.value.toLocaleLowerCase("pt-BR");container.querySelectorAll("[data-note-row]").forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase("pt-BR").includes(q);});});
+}

@@ -10,6 +10,10 @@ import { computeOverviewStats } from "../services/statistics.js";
 import { formatNumber, formatStars } from "../utils/formatters.js";
 import { relativeDayLabel, formatDateBR } from "../utils/dates.js";
 import { openProgressModal, openBookFormModal } from "./modals.js";
+import { store } from "../storage/storage.js";
+import { buildInsights } from "../services/insights.js";
+import { goalProgress, GOAL_TYPES } from "../services/goals.js";
+import { todayISO } from "../utils/dates.js";
 
 function buildActivityFeed(limit = 8) {
   const events = [];
@@ -43,7 +47,7 @@ function buildActivityFeed(limit = 8) {
       });
     }
     if (r.status === STATUS.ABANDONED) {
-      events.push({ date: r.updatedAt?.slice(0, 10), sortKey: r.updatedAt, html: `<b>${esc(book.title)}</b>`, delta: "Abandonado" });
+      events.push({ date: r.abandonedAt?.slice(0, 10), sortKey: r.abandonedAt, html: `<b>${esc(book.title)}</b>`, delta: "Abandonado" });
     }
   });
 
@@ -57,6 +61,10 @@ export function renderDashboardPage(container) {
   const stats = computeOverviewStats();
   const reading = listByStatus(STATUS.READING);
   const activity = buildActivityFeed(8);
+  const today=todayISO();
+  const goal=Object.values(store.getState().goals).find(g=>g.startDate<=today&&g.endDate>=today);
+  const progress=goal?goalProgress(goal):null;
+  const oldNote=Object.values(store.getState().annotations).filter(a=>a.createdAt.slice(0,10)<today).sort((a,b)=>a.createdAt.localeCompare(b.createdAt))[0];
 
   container.innerHTML = `
     <div class="page-header">
@@ -89,6 +97,7 @@ export function renderDashboardPage(container) {
       </div>
     </div>
 
+    <section class="card"><h2>Seu histórico em perspectiva</h2>${buildInsights(store.getState()).slice(0,2).map(text=>`<p>${esc(text)}</p>`).join("")}${progress?`<p>Meta em andamento: ${progress.current}/${progress.target} ${GOAL_TYPES[progress.type].toLowerCase()}.</p>`:""}<a href="#/estatisticas">Ver análises e todas as metas</a>${oldNote?`<h3>Do seu histórico</h3><p class="history-note">${esc(oldNote.text.slice(0,300))}</p><a href="${bookRoute(oldNote.bookId)}">${esc(getBook(oldNote.bookId).title)}</a>`:""}</section>
     <div class="two-col">
       <div class="card">
         <div class="card-head">

@@ -158,7 +158,7 @@ test("rotas diretas e inválidas não causam falha de renderização", () => {
 
 test("limpeza da página aborta os listeners de cada montagem", () => {
   reset(); const b = book(); const signals = [];
-  const container = { innerHTML: "", addEventListener(type, handler, options) { signals.push(options.signal); } };
+  const container = { innerHTML: "", querySelectorAll() { return []; }, querySelector() { return null; }, addEventListener(type, handler, options) { signals.push(options.signal); } };
   for (let i = 0; i < 5; i++) {
     const cleanup = renderBookDetailsPage(container, b.id);
     assert.equal(signals.at(-1).aborted, false);

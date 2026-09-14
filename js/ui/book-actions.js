@@ -17,7 +17,7 @@ export function openDeleteBookModal(book) {
     title: "Excluir livro permanentemente",
     bodyHTML: `<p>${esc(book.title)}</p>
       <dl class="backup-summary"><div><dt>Leituras</dt><dd>${impact.readings}</dd></div><div><dt>Sessões e saldos</dt><dd>${impact.sessions}</dd></div><div><dt>Avaliações</dt><dd>${impact.ratings}</dd></div></dl>
-      <p>A exclusão removerá ${impact.pagesRead} páginas e ${impact.completed} conclusões das estatísticas, além das notas e correções vinculadas. Não há lixeira; para recuperar, será necessário restaurar um backup.</p>
+      <p>A exclusão removerá ${impact.pagesRead} páginas e ${impact.completed} conclusões das estatísticas, além de ${impact.annotations} anotações e das notas e correções vinculadas. Não há lixeira; para recuperar, será necessário restaurar um backup.</p>
       ${canArchive ? "<p>Você pode arquivar para ocultar o livro e preservar todo o histórico.</p>" : !book.archivedAt ? "<p>Para arquivar e preservar o histórico, primeiro conclua ou abandone a leitura em andamento ou pausada.</p>" : "<p>Este livro já está arquivado e seu histórico continua preservado.</p>"}
       <button class="btn btn-secondary" id="delete-export">Exportar backup antes de excluir</button>
       <label><input id="delete-consent" type="checkbox" /> Entendo que esta exclusão é permanente.</label>

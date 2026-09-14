@@ -63,11 +63,13 @@ export function bookDeletionSummary(id) {
   const ids = new Set(readings.map(r => r.id));
   const sessions = Object.values(state.sessions).filter(s => ids.has(s.readingId));
   const ratings = Object.values(state.ratings).filter(r => ids.has(r.readingId));
+  const annotations = Object.values(state.annotations || {}).filter(a => a.bookId === id);
   return {
     readings: readings.length, sessions: sessions.length, ratings: ratings.length,
     pagesRead: sessions.reduce((sum, s) => sum + s.pagesRead, 0),
     completed: readings.filter(r => r.status === "completed").length,
-    snapshot: JSON.stringify({ book, readings, sessions, ratings }),
+    annotations: annotations.length,
+    snapshot: JSON.stringify({ book, readings, sessions, ratings, annotations }),
   };
 }
 
@@ -98,7 +100,7 @@ export function createBook(data) {
       authorIds: author ? [author.id] : [],
       pages: Number(data.pages) || 0,
       primaryGenre: data.primaryGenre || data.genre || "Outro",
-      genres: Array.isArray(data.genres) && data.genres.length ? [...new Set(data.genres)] : [data.primaryGenre || data.genre || "Outro"],
+      genres: [...new Set([data.primaryGenre || data.genre || "Outro", ...(Array.isArray(data.genres) ? data.genres : [])])],
       isbn: data.isbn?.trim() || null,
       publisher: data.publisher?.trim() || null,
       publicationYear: data.year ? Number(data.year) : null,
@@ -142,6 +144,7 @@ export function updateBook(id, data) {
         book.genres = Array.isArray(data.genres) && data.genres.length ? [...new Set(data.genres)] : [book.primaryGenre];
       }
       if (data.genres !== undefined) book.genres = [...new Set(data.genres)].filter(Boolean);
+      book.genres = [...new Set([book.primaryGenre, ...book.genres])];
       if (data.isbn !== undefined) book.isbn = data.isbn.trim() || null;
       if (data.publisher !== undefined) book.publisher = data.publisher.trim() || null;
       if (data.series !== undefined) book.series = data.series.trim() || null;
@@ -176,6 +179,9 @@ export function deleteBook(id, { expectedSnapshot } = {}) {
         delete state.readings[readingId];
       });
 
+      for (const annotation of Object.values(state.annotations || {})) {
+        if (annotation.bookId === id) delete state.annotations[annotation.id];
+      }
       delete state.books[id];
     });
     pruneUnusedAuthors();

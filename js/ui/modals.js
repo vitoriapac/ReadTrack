@@ -6,6 +6,7 @@ import { createBook, updateBook, listGenres, listFormats, authorNamesForBook, ge
 import { startReading, logProgress, completeReading, abandonReading, addToWantToRead, ABANDON_REASONS } from "../domain/readings.js";
 import { saveRating, ratingForReading } from "../domain/ratings.js";
 import { todayISO } from "../utils/dates.js";
+import { lookupISBN } from "../services/isbn.js";
 
 import { openModal as open, closeModal } from "./dialog.js";
 export { closeModal } from "./dialog.js";
@@ -14,7 +15,7 @@ export { closeModal } from "./dialog.js";
 
 export function openBookFormModal(existingId = null) {
   const existing = existingId ? getBook(existingId) : null;
-  const genres = listGenres();
+  const genres = [...new Set([...listGenres(), ...(existing?.genres || [])])];
   const formats = listFormats();
 
   open({
@@ -44,7 +45,7 @@ export function openBookFormModal(existingId = null) {
           <div class="field">
             <label for="f-genre">Gênero principal</label>
             <select id="f-genre" name="primaryGenre">
-              ${genres.map((g) => `<option value="${g}" ${(existing?.primaryGenre || existing?.genre) === g ? "selected" : ""}>${g}</option>`).join("")}
+              ${genres.map((g) => `<option value="${esc(g)}" ${(existing?.primaryGenre || existing?.genre) === g ? "selected" : ""}>${esc(g)}</option>`).join("")}
             </select>
           </div>
           <div class="field">
@@ -58,6 +59,8 @@ export function openBookFormModal(existingId = null) {
           <div class="field"><label for="f-isbn">ISBN (opcional)</label><input id="f-isbn" name="isbn" value="${esc(existing?.isbn ?? "")}" placeholder="978..." /></div>
           <div class="field"><label for="f-publisher">Editora (opcional)</label><input id="f-publisher" name="publisher" value="${esc(existing?.publisher ?? "")}" /></div>
         </div>
+        <button type="button" class="btn btn-secondary" id="lookup-isbn">Consultar ISBN na Open Library</button><p class="field-hint">A consulta envia somente o ISBN informado. Revise os metadados antes de aplicar.</p><div id="isbn-preview"></div>
+        <div class="field"><label for="extra-genres">Outros gêneros (separados por vírgula)</label><input id="extra-genres" name="extraGenres" value="${esc((existing?.genres || []).filter(g=>g!==existing?.primaryGenre).join(", "))}" /></div>
         <div class="field-row">
           <div class="field"><label for="f-series">Série (opcional)</label><input id="f-series" name="series" value="${esc(existing?.series ?? "")}" /></div>
           <div class="field"><label for="f-series-number">Volume</label><input id="f-series-number" name="seriesNumber" type="number" min="1" value="${esc(existing?.seriesNumber ?? "")}" /></div>
@@ -73,10 +76,22 @@ export function openBookFormModal(existingId = null) {
       <button class="btn btn-primary" type="submit" form="book-form">${existing ? "Salvar" : "Adicionar"}</button>
     `,
     onMount: (el) => {
+      const lookup = el.querySelector("#lookup-isbn");
+      lookup.addEventListener("click",async()=>{
+        const preview=el.querySelector("#isbn-preview");lookup.disabled=true;
+        try {
+          const data=await lookupISBN(el.querySelector("#f-isbn").value);
+          if(!lookup.isConnected)return;
+          preview.innerHTML=`<p>${esc(data.title)} · ${esc(data.authorName)} · ${esc(data.publisher)} · ${data.pages || "Páginas não informadas"}</p><button type="button" class="btn btn-secondary" id="apply-isbn">Aplicar metadados ao formulário</button>`;
+          preview.querySelector("button").addEventListener("click",()=>{for(const [key,value] of Object.entries(data)){const input=el.querySelector(`[name="${key}"]`);if(input&&value!=="")input.value=value;}preview.textContent="Metadados aplicados. Revise e salve o livro.";});
+        } catch(error) {preview.textContent=error.message;}
+        finally {lookup.disabled=false;}
+      });
       el.querySelector("#book-form").addEventListener("submit", (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
         const data = Object.fromEntries(fd.entries());
+        data.genres=[...new Set([data.primaryGenre,...data.extraGenres.split(",").map(g=>g.trim()).filter(Boolean)])];
         if (!data.title.trim() || !data.authorName.trim() || !data.pages) {
           showToast("Preencha título, autor e número de páginas.");
           return;
@@ -160,6 +175,7 @@ export function openProgressModal(book, reading) {
           <textarea id="p-notes" name="notes" placeholder="Alguma impressão sobre esse trecho..."></textarea>
         </div>
         <div class="field"><label for="p-duration">Duração em minutos (opcional)</label><input id="p-duration" name="duration" type="number" min="0" step="1" /></div>
+        <button type="button" class="btn btn-secondary" id="reading-timer">Iniciar cronômetro</button><p id="timer-status" role="status"></p>
         <p class="field-hint">A data pode ser retroativa, a partir do início da leitura. As páginas vão para essa data; a posição atual avança na ordem dos lançamentos. Para corrigir um lançamento existente, use Histórico e correções.</p>
       </form>
     `,
@@ -177,12 +193,30 @@ export function openProgressModal(book, reading) {
           return;
         }
         logProgress(reading.id, { currentPage, date: fd.get("date") || todayISO(), notes: fd.get("notes"), duration: fd.get("duration") || null });
+        sessionStorage.removeItem("readtrack:timer:" + reading.id);
         closeModal();
         if (currentPage >= book.pages) {
           openCompleteFlow(book, { ...reading, currentPage });
         } else {
           showToast("Progresso registrado.");
         }
+      });
+      const key = "readtrack:timer:" + reading.id;
+      const timer = el.querySelector("#reading-timer");
+      const refresh = () => { timer.textContent = sessionStorage.getItem(key) ? "Parar e preencher duração" : "Iniciar cronômetro"; };
+      refresh();
+      timer.addEventListener("click", () => {
+        const started = sessionStorage.getItem(key);
+        if (started) {
+          const minutes = Math.max(1, Math.round((Date.now() - Number(started)) / 60000));
+          el.querySelector("#p-duration").value = minutes;
+          el.querySelector("#timer-status").textContent = `${minutes} minutos. Revise antes de salvar.`;
+          sessionStorage.removeItem(key);
+        } else {
+          sessionStorage.setItem(key, String(Date.now()));
+          el.querySelector("#timer-status").textContent = "Cronômetro iniciado. Você pode fechar e reabrir este registro nesta aba.";
+        }
+        refresh();
       });
     },
   });

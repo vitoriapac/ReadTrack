@@ -3,6 +3,31 @@
    =================================================================== */
 
 /* ---- Botões ---- */
+.analysis-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: 16px; }
+.stats-bar-row, .series-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 0; }
+.stats-bar-row progress { flex: 1; min-width: 80px; }
+.table-scroll { overflow-x: auto; }
+.table-scroll table { width: 100%; border-collapse: collapse; }
+.table-scroll th, .table-scroll td { padding: 10px; border-bottom: 1px solid var(--color-border); text-align: left; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 5px; }
+.calendar-day { display: grid; gap: 8px; padding: 8px 3px; border: 1px solid var(--color-border); border-radius: 6px; }
+.calendar-day small { font-size: 10px; }
+.calendar-day.has-reading { background: var(--color-accent-soft); }
+.nav-group { flex-wrap: wrap; }
+.sidebar { overflow-y: auto; }
+.card, .field, .kpi-card { min-width: 0; overflow-wrap: anywhere; }
+.field input, .field select { min-width: 0; max-width: 100%; }
+.history-entry + .history-entry { margin-top: 12px; }
+@media(max-width: 540px) { .field-row { grid-template-columns: 1fr; } .card-head { flex-wrap: wrap; gap: 12px; } .btn { white-space: normal; } }
+@media print {
+  .sidebar, .no-print, #modal-root, .toast-stack { display: none !important; }
+  .app-shell { display: block; }
+  .main { padding: 0; }
+  .card, .kpi-card { box-shadow: none; break-inside: avoid; }
+  .table-scroll { overflow: visible; }
+  .main-inner { gap: 12px; }
+  body { background: white; color: black; }
+}
 .btn {
   display: inline-flex;
   align-items: center;

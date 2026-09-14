@@ -26,6 +26,27 @@ Os testes cobrem transações, falhas de persistência, dados corrompidos, confl
 
 Operações compostas compartilham um rascunho e gravam uma única vez. Se uma validação ou gravação falhar, o estado anterior permanece. A interface é notificada após a gravação. O domínio ainda usa um armazenamento global; a classe Store aceita uma persistência injetável para testes.
 
+## Análises e registros disponíveis
+
+- **Estatísticas:** filtro por mês, ano, ano anterior, todo o histórico ou intervalo personalizado; páginas por data de sessão; conclusões e avaliações por data de conclusão; autores novos pela primeira conclusão histórica. Inclui distribuições por gênero/formato/tamanho, rankings e página do autor.
+- **Metas:** criação, edição e exclusão com período próprio, gênero opcional e tamanho mínimo. Progresso e projeções consideram somente registros até hoje. Estimativas de término usam os últimos 30 dias e exigem pelo menos 3 dias ativos.
+- **Perfil e insights:** regras determinísticas e limites de amostra; comparações mensais, anuais e trimestrais, evolução de gêneros, retrospectiva do período e sugestões da fila. Livros arquivados permanecem no histórico e são excluídos das sugestões.
+- **Anotações:** notas e citações nos detalhes, edição/exclusão e busca global por texto, título e autor. Anotações são incluídas no backup e na exclusão em cascata do livro.
+- **Calendário:** grade mensal, sequências, horas e páginas/hora apenas das sessões com tempo registrado. Cronômetro no formulário de progresso; pare-o para preencher e revisar os minutos antes de salvar.
+- **Demo:** 40 livros fictícios, 28 autores, 350 sessões, 32 conclusões, 5 abandonos e 4 releituras nos 12 meses anteriores. É uma fonte temporária apenas da tela de estatísticas; não substitui a biblioteca.
+
+### Importação e exportação
+
+O importador CSV aceita colunas `title,author,pages` (também `título,autor,páginas`) e as equivalentes de catálogo Goodreads. ISBN, editora, gênero e ano são opcionais. A prévia apresenta duplicados/linhas inválidas; apenas livros válidos são adicionados a **Quero ler**, numa única transação. **Histórico, avaliações e datas do Goodreads ainda não são importados.**
+
+O botão de ISBN consulta a [Books API da Open Library](https://openlibrary.org/dev/docs/api/books), apresenta os metadados e só preenche o formulário após aplicar a prévia. A consulta depende de rede e disponibilidade do serviço.
+
+**Imprimir / salvar PDF** nas estatísticas usa a impressão do navegador, com estilos próprios. Selecione “Salvar como PDF” no diálogo do sistema; não há geração automática de arquivo PDF.
+
+Abandonos antigos sem data são preservados como desconhecidos e excluídos de recortes temporais. O schema continua na versão 6.
+
+Plano e critérios de entrega: [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+
 ## Dados e backup
 
 Use **Exportar backup** regularmente. **Restaurar backup** valida o JSON e substitui a biblioteca após confirmação. Não há sincronização em nuvem. Limpar os dados do navegador remove a biblioteca.
@@ -52,7 +73,7 @@ Na biblioteca, abra **Mais ações → Histórico e correções** para consultar
 
 A migração v1→v2 preserva sessões e converte diferenças positivas do progresso antigo em saldo `balance`, sem inventar datas. O saldo mantém o total histórico, mas não conta em períodos filtrados ou dias de leitura. Sessões antigas que excedam o progresso causam rejeição da migração, preservando o original.
 
-Transformações ficam em `js/storage/migrations.js` e validações em `schema.js`. A migração no carregamento é feita em memória e persistida na próxima operação salva. Backups novos usam v3; versões antigas do aplicativo não podem abri-los.
+Transformações ficam em `js/storage/migrations.js` e validações em `schema.js`. A migração no carregamento é feita em memória e persistida na próxima operação salva. Backups novos usam v6; versões antigas do aplicativo não podem abri-los.
 
 ## Detalhes do livro e arquivamento (esquema v3)
 

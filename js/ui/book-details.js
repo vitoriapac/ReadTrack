@@ -14,6 +14,7 @@ import { sessionHistoryHTML } from "./session-view.js";
 import { performReadingAction } from "./reading-actions.js";
 import { changeBookArchive, openDeleteBookModal } from "./book-actions.js";
 import { showToast } from "./toast.js";
+import { annotationsHTML, wireAnnotations } from "./annotations.js";
 
 function readingButtons(book, reading) {
   const button = (action, text) => `<button class="btn btn-secondary btn-sm" data-action="${action}" data-reading="${reading.id}">${text}</button>`;
@@ -38,6 +39,7 @@ function readingSection(book, reading, index) {
     <p>Início: ${formatDateFullBR(reading.startedAt)} · Conclusão: ${formatDateFullBR(reading.finishedAt)}</p>
     <p>Posição: ${reading.currentPage}/${book.pages} · Volume registrado: ${volume.pagesRead} páginas${volume.undatedPages ? ` (inclui ${volume.undatedPages} sem data conhecida)` : ""}.</p>
     ${reading.abandonReason ? `<p>Motivo do abandono: ${esc(reading.abandonReason)}</p>` : ""}
+    ${reading.status === "abandoned" ? `<p>Data de abandono: ${reading.abandonedAt ? formatDateFullBR(reading.abandonedAt.slice(0,10)) : "Não conhecida (registro antigo)"}.</p>` : ""}
     ${rating ? `<div class="book-rating"><p class="stars" aria-label="Nota ${rating.overall} de 5">${formatStars(rating.overall)} · ${rating.overall}/5</p>${rating.review ? `<p class="history-note">${esc(rating.review)}</p>` : "<p>Sem resenha.</p>"}</div>` : '<p class="text-muted">Sem avaliação.</p>'}
     <div class="detail-actions">${readingButtons(book, reading)}</div>
     <details class="session-list" open><summary>Sessões e notas (${sessions.length})</summary>
@@ -70,12 +72,14 @@ export function bookDetailsHTML(bookId) {
         ${!book.archivedAt && !canArchiveBook(book.id) ? '<p id="archive-help" class="field-hint">Conclua ou abandone a leitura em andamento ou pausada antes de arquivar.</p>' : ""}
       </div>
     </section>
+    ${annotationsHTML(book.id)}
     <h2>Histórico de leituras (${readings.length})</h2>
     ${readings.length ? readings.map((reading, i) => readingSection(book, reading, readings.length - i)).join("") : '<p class="card">Este livro ainda não tem histórico de leitura.</p>'}`;
 }
 
 export function renderBookDetailsPage(container, bookId) {
   container.innerHTML = bookDetailsHTML(bookId);
+  if (getBook(bookId)) wireAnnotations(container, bookId);
   const events = new AbortController();
   container.addEventListener("click", event => {
     const target = event.target.closest("[data-action], [data-correct], [data-return]");

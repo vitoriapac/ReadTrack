@@ -11,6 +11,9 @@ import { closeModal } from "./ui/dialog.js";
 import { renderStatisticsPage } from "./ui/statistics.js";
 import { renderSeriesPage } from "./ui/series.js";
 import { renderCalendarPage } from "./ui/calendar.js";
+import { renderAuthorPage } from "./ui/author.js";
+import { openCatalogImport } from "./ui/imports.js";
+import { renderNotebookPage } from "./ui/notebook.js";
 
 const ROUTES = {
   dashboard: { label: "Visão geral", icon: icons.dashboard, render: renderDashboardPage },
@@ -18,6 +21,7 @@ const ROUTES = {
   estatisticas: { label: "Estatísticas", icon: icons.dashboard, render: renderStatisticsPage },
   series: { label: "Séries", icon: icons.library, render: renderSeriesPage },
   calendario: { label: "Calendário", icon: icons.dashboard, render: renderCalendarPage },
+  anotacoes: { label: "Anotações", icon: icons.library, render: renderNotebookPage },
 };
 
 let disposePage = null;
@@ -40,6 +44,7 @@ function renderShell() {
           <p>Seus dados ficam salvos apenas neste navegador.</p>
           <button class="btn btn-secondary btn-sm" id="export-backup">Exportar backup</button>
           <button class="btn btn-secondary btn-sm" id="import-backup">Restaurar backup</button>
+          <button class="btn btn-secondary btn-sm" id="import-catalog">Importar catálogo CSV</button>
           <input type="file" id="backup-file" accept=".json,application/json" hidden />
         </div>
       </aside>
@@ -56,13 +61,13 @@ function renderPage() {
   const route = resolveRoute(window.location.hash);
   document.getElementById("storage-error")?.remove();
   document.querySelectorAll("[data-route]").forEach((a) => {
-    const active = a.dataset.route === (route.name === "livro" ? "biblioteca" : route.name);
+    const active = a.dataset.route === (route.name === "livro" ? "biblioteca" : route.name === "autor" ? "estatisticas" : route.name);
     a.classList.toggle("is-active", active);
     if (active) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   });
   const view = document.getElementById("view");
-  disposePage = route.name === "livro" ? renderBookDetailsPage(view, route.id) : ROUTES[route.name].render(view);
+  disposePage = route.name === "livro" ? renderBookDetailsPage(view, route.id) : route.name === "autor" ? renderAuthorPage(view, route.id) : ROUTES[route.name].render(view);
   document.title = `${view.querySelector("h1")?.textContent || "ReadTrack"} — ReadTrack`;
   if (store.loadError) {
     const warning = document.createElement("p");
@@ -80,6 +85,7 @@ function init() {
     event.preventDefault();
   });
   renderShell();
+  document.getElementById("import-catalog").addEventListener("click",openCatalogImport);
   document.getElementById("export-backup").addEventListener("click", () => downloadBackup(store));
   const input = document.getElementById("backup-file");
   document.getElementById("import-backup").addEventListener("click", () => input.click());
