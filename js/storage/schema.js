@@ -7,7 +7,7 @@ const statuses = ["want_to_read", "reading", "paused", "completed", "abandoned"]
 
 export function validateState(state, version) {
   requireValue(object(state) && object(state.meta) && state.meta.version === version, "Metadados inválidos.");
-  for (const key of ["books", "authors", "readings", "sessions", "ratings"]) {
+  for (const key of ["books", "authors", "readings", "sessions", "ratings", ...(version >= 5 ? ["goals"] : [])]) {
     requireValue(object(state[key]), "Coleção inválida: " + key);
     for (const [id, item] of Object.entries(state[key])) {
       requireValue(object(item) && item.id === id && /^[a-zA-Z0-9_-]+$/.test(id) && !["__proto__", "constructor", "prototype"].includes(id), "Identificador inválido.");
@@ -15,6 +15,12 @@ export function validateState(state, version) {
         requireValue(item[field] == null || (typeof item[field] === "string" && Number.isFinite(Date.parse(item[field]))), "Data de registro inválida.");
       }
     }
+  }
+  if (version >= 5) for (const g of Object.values(state.goals)) {
+    requireValue(["books", "pages", "authors", "newAuthors", "readingDays"].includes(g.type), "Tipo de meta inválido.");
+    requireValue(Number.isSafeInteger(g.target) && g.target > 0, "Alvo da meta inválido.");
+    validDate(g.startDate); validDate(g.endDate, g.startDate);
+    requireValue(g.filters == null || (typeof g.filters === "object" && !Array.isArray(g.filters)), "Filtros da meta inválidos.");
   }
   for (const a of Object.values(state.authors)) requireValue(typeof a.name === "string" && a.name.trim(), "Autor inválido.");
   for (const b of Object.values(state.books)) {

@@ -50,6 +50,10 @@ export function computePeriodStats(state = store.getState(), { from = null, to =
   return { booksCompleted: readings.length, pagesRead: sessions.reduce((n, s) => n + s.pagesRead, 0), distinctAuthors: authors.size, newAuthors: newAuthors.size, readingDays: new Set(sessions.map(s => s.date)).size, avgRating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, monthly: [...monthMap.values()].sort((a, b) => a.month.localeCompare(b.month)), genres: Object.fromEntries(genres), formats: Object.fromEntries(formats), sizes: Object.fromEntries(sizes) };
 }
 
+export function computeProjection(state = store.getState(), { from, to, target } = {}) {
+  const stats = computePeriodStats(state, { from, to }); const start = new Date(`${from}T00:00:00Z`), end = new Date(`${to}T00:00:00Z`), today = new Date(); const elapsed = Math.max(1, Math.min((today - start) / 86400000, (end - start) / 86400000)); const total = Math.max(1, (end - start) / 86400000); const perDay = stats.booksCompleted / elapsed; const projection = Math.round(perDay * total); return { ...stats, projection, target, neededPerDay: target ? Math.max(0, (target - stats.booksCompleted) / Math.max(1, total - elapsed)) : 0 };
+}
+
 export function demoState() {
   const state = { meta: { version: 4 }, books: {}, authors: {}, readings: {}, sessions: {}, ratings: {} };
   const genres = ["Ficção científica", "Fantasia", "Clássico", "Suspense", "Não ficção"];

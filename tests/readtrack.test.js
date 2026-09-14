@@ -62,7 +62,7 @@ test("migrações rejeitam versões futuras, tipos e referências inválidas", (
   assert.throws(() => migrate({ ...emptyState(), books: [] }));
   assert.throws(() => migrate(null));
   assert.throws(() => migrate({ ...emptyState(), readings: { x: { id: "x", bookId: "missing" } } }));
-  assert.equal(migrate({}).meta.version, 4);
+  assert.equal(migrate({}).meta.version, 5);
 });
 test("textos são escapados e capas aceitam apenas HTTP(S)", () => {
   assert.equal(escapeHTML('<img src="x" onerror=\'bad\'>&'), "&lt;img src=&quot;x&quot; onerror=&#39;bad&#39;&gt;&amp;");
