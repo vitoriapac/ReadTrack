@@ -4,6 +4,7 @@ export function bookRoute(id) {
 
 export function resolveRoute(hash) {
   if (hash === "#/biblioteca") return { name: "biblioteca" };
+  if (hash === "#/estatisticas") return { name: "estatisticas" };
   if (hash.startsWith("#/livro/")) {
     try {
       const id = decodeURIComponent(hash.slice("#/livro/".length));

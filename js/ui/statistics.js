@@ -1,0 +1,13 @@
+import { computePeriodStats, demoState } from "../services/statistics.js";
+import { formatNumber } from "../utils/formatters.js";
+import { store } from "../storage/storage.js";
+
+export function renderStatisticsPage(container) {
+  const demo = sessionStorage.getItem("readtrack:demo") === "1";
+  const state = demo ? demoState() : store.getState();
+  const year = new Date().getFullYear();
+  const stats = computePeriodStats(state, { from: `${year}-01-01`, to: `${year}-12-31` });
+  const max = Math.max(1, ...stats.monthly.map(m => m.pages));
+  container.innerHTML = `<div class="page-header"><div><h1>Estatísticas${demo ? " · Demo" : ""}</h1><div class="page-subtitle">${demo ? "Explore uma biblioteca fictícia sem alterar seus dados." : "Entenda seus hábitos de leitura."}</div></div><button class="btn btn-secondary" id="toggle-demo">${demo ? "Voltar aos meus dados" : "Explorar modo demo"}</button></div><div class="kpi-grid"><div class="kpi-card"><div class="kpi-value">${formatNumber(stats.booksCompleted)}</div><div class="kpi-label">Livros concluídos</div></div><div class="kpi-card"><div class="kpi-value">${formatNumber(stats.pagesRead)}</div><div class="kpi-label">Páginas lidas</div></div><div class="kpi-card"><div class="kpi-value">${formatNumber(stats.distinctAuthors)}</div><div class="kpi-label">Autores diferentes</div></div><div class="kpi-card"><div class="kpi-value">${formatNumber(stats.newAuthors)}</div><div class="kpi-label">Autores novos</div></div><div class="kpi-card"><div class="kpi-value">${formatNumber(stats.readingDays)}</div><div class="kpi-label">Dias com leitura</div></div><div class="kpi-card"><div class="kpi-value">${stats.avgRating ? stats.avgRating.toFixed(1) : "—"}</div><div class="kpi-label">Avaliação média</div></div></div><div class="two-col"><div class="card"><div class="card-head"><div class="card-title">Evolução mensal</div></div><div class="stats-bars">${stats.monthly.map(m => `<div class="stats-bar-row"><span>${m.month}</span><div class="progress-track"><div class="progress-fill" style="width:${Math.round(m.pages / max * 100)}%"></div></div><strong>${formatNumber(m.pages)} pág.</strong></div>`).join("") || `<div class="empty-state">Ainda não há leituras no período.</div>`}</div></div><div class="card"><div class="card-head"><div class="card-title">Distribuição</div></div><dl class="backup-summary">${Object.entries(stats.genres).map(([k,v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("") || `<div class="empty-state">Sem dados.</div>`}</dl></div></div>`;
+  container.querySelector("#toggle-demo").addEventListener("click", () => { if (demo) sessionStorage.removeItem("readtrack:demo"); else sessionStorage.setItem("readtrack:demo", "1"); renderStatisticsPage(container); });
+}
