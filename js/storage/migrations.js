@@ -1,6 +1,6 @@
 import { requireValue } from "../utils/validation.js";
 import { validateState } from "./schema.js";
-export const CURRENT_VERSION = 3;
+export const CURRENT_VERSION = 4;
 export function emptyState() {
   return { meta: { version: CURRENT_VERSION, createdAt: new Date().toISOString(), updatedAt: null }, books: {}, authors: {}, readings: {}, sessions: {}, ratings: {} };
 }
@@ -37,6 +37,21 @@ const MIGRATIONS = {
       }
     }
     state.meta.version = 2;
+    return state;
+  },
+  3(state) {
+    validateState(state, 3);
+    for (const book of Object.values(state.books)) {
+      const legacyGenre = typeof book.genre === "string" && book.genre.trim() ? book.genre : "Outro";
+      book.primaryGenre = book.primaryGenre || legacyGenre;
+      book.genres = Array.isArray(book.genres) && book.genres.length ? [...new Set(book.genres)] : [book.primaryGenre];
+      book.isbn ??= null;
+      book.publisher ??= null;
+      book.seriesNumber ??= null;
+      delete book.genre;
+    }
+    for (const reading of Object.values(state.readings)) reading.abandonedAt ??= null;
+    state.meta.version = 4;
     return state;
   },
 };

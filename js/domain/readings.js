@@ -74,6 +74,7 @@ export function addToWantToRead(bookId) {
     ratingId: null,
     isReread: listReadingsByBook(bookId).some((r) => r.status === STATUS.COMPLETED),
     abandonReason: null,
+    abandonedAt: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -105,6 +106,7 @@ export function startReading(bookId, { initialPage = 0, startedAt = todayISO(), 
       ratingId: null,
       isReread: listReadingsByBook(bookId).some((r) => r.status === STATUS.COMPLETED),
       abandonReason: null,
+      abandonedAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -191,6 +193,7 @@ export function abandonReading(readingId, reason = null) {
     if (!r) return;
     r.status = STATUS.ABANDONED;
     r.abandonReason = reason;
+    r.abandonedAt = new Date().toISOString();
     r.updatedAt = new Date().toISOString();
   });
 }

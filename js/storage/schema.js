@@ -22,7 +22,11 @@ export function validateState(state, version) {
     requireValue(typeof b.title === "string" && b.title.trim(), "Título inválido.");
     requireValue(pageNumber(b.pages) > 0 && typeof b.pages === "number", "Total de páginas inválido.");
     requireValue(Array.isArray(b.authorIds) && b.authorIds.every(id => own(state.authors, id)), "Autor inexistente.");
-    for (const field of ["genre", "format", "language", "series"]) requireValue(b[field] == null || typeof b[field] === "string", "Texto do livro inválido.");
+    for (const field of ["primaryGenre", "format", "language", "series", "isbn", "publisher"]) requireValue(b[field] == null || typeof b[field] === "string", "Texto do livro inválido.");
+    if (version >= 4) {
+      requireValue(Array.isArray(b.genres) && b.genres.length > 0 && b.genres.every(g => typeof g === "string" && g.trim()), "Gêneros inválidos.");
+      requireValue(b.seriesNumber == null || (Number.isInteger(b.seriesNumber) && b.seriesNumber > 0), "Número do volume inválido.");
+    }
     b.cover = coverURL(b.cover);
   }
   const opened = new Set();
@@ -37,6 +41,8 @@ export function validateState(state, version) {
     if (r.finishedAt) validDate(r.finishedAt, r.startedAt);
     if (r.status === "completed") validDate(r.finishedAt, r.startedAt);
     requireValue(r.abandonReason == null || typeof r.abandonReason === "string", "Motivo inválido.");
+    if (version >= 4) requireValue(r.abandonedAt == null || (typeof r.abandonedAt === "string" && Number.isFinite(Date.parse(r.abandonedAt))), "Data de abandono inválida.");
+    if (r.status === "abandoned") requireValue(typeof r.abandonedAt === "string", "Leitura abandonada sem data.");
     if (!["completed", "abandoned"].includes(r.status)) {
       requireValue(!opened.has(r.bookId), "Há leituras abertas duplicadas.");
       opened.add(r.bookId);

@@ -95,7 +95,7 @@ function bookCardHTML(book) {
         <div class="book-card-author">${esc(authorNames)}</div>
         ${bodyExtra}
         <div class="book-card-meta">
-          <span class="text-faint" style="font-size: var(--fs-2xs);">${book.pages} pág. · ${esc(book.genre)}</span>
+          <span class="text-faint" style="font-size: var(--fs-2xs);">${book.pages} pág. · ${esc((book.genres || [book.primaryGenre || book.genre]).join(", "))}</span>
           <div class="menu-wrap">
             <button class="btn-icon" data-menu-toggle="${book.id}" aria-label="Mais ações">${icons.kebab}</button>
             ${openMenuBookId === book.id ? menuHTML(book, reading, status) : ""}

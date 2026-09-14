@@ -83,7 +83,7 @@ export function authorNamesForBook(book) {
 
 /**
  * Cria um livro.
- * @param {object} data - title, authorName, pages, genre, year, format, language, cover
+ * @param {object} data - title, authorName, pages, primaryGenre, genres, year, format, language, cover, isbn, publisher, series, seriesNumber
  */
 export function createBook(data) {
   requireValue(typeof data.title === "string" && data.title.trim(), "Informe o título.");
@@ -97,11 +97,15 @@ export function createBook(data) {
       title: data.title.trim(),
       authorIds: author ? [author.id] : [],
       pages: Number(data.pages) || 0,
-      genre: data.genre || "Outro",
+      primaryGenre: data.primaryGenre || data.genre || "Outro",
+      genres: Array.isArray(data.genres) && data.genres.length ? [...new Set(data.genres)] : [data.primaryGenre || data.genre || "Outro"],
+      isbn: data.isbn?.trim() || null,
+      publisher: data.publisher?.trim() || null,
       publicationYear: data.year ? Number(data.year) : null,
       format: data.format || "Físico",
       language: data.language || "Português",
       series: data.series || null,
+      seriesNumber: data.seriesNumber ? Number(data.seriesNumber) : null,
       cover: data.cover || null,
       archivedAt: null,
       createdAt: new Date().toISOString(),
@@ -133,7 +137,15 @@ export function updateBook(id, data) {
       }
       if (data.title !== undefined) book.title = data.title.trim();
       if (data.pages !== undefined) book.pages = Number(data.pages) || 0;
-      if (data.genre !== undefined) book.genre = data.genre;
+      if (data.primaryGenre !== undefined || data.genre !== undefined) {
+        book.primaryGenre = data.primaryGenre ?? data.genre;
+        book.genres = Array.isArray(data.genres) && data.genres.length ? [...new Set(data.genres)] : [book.primaryGenre];
+      }
+      if (data.genres !== undefined) book.genres = [...new Set(data.genres)].filter(Boolean);
+      if (data.isbn !== undefined) book.isbn = data.isbn.trim() || null;
+      if (data.publisher !== undefined) book.publisher = data.publisher.trim() || null;
+      if (data.series !== undefined) book.series = data.series.trim() || null;
+      if (data.seriesNumber !== undefined) book.seriesNumber = data.seriesNumber ? Number(data.seriesNumber) : null;
       if (data.year !== undefined) book.publicationYear = data.year ? Number(data.year) : null;
       if (data.format !== undefined) book.format = data.format;
       if (data.language !== undefined) book.language = data.language;

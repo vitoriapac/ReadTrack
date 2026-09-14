@@ -60,7 +60,7 @@ Clique no título de um livro na biblioteca ou em Lendo agora para abrir `#/livr
 
 Os filtros **Ativos** e **Arquivados** separam a visibilidade da biblioteca. **Arquivar livro** mantém leituras, sessões, notas, correções, avaliações e indicadores. Uma leitura em andamento ou pausada precisa ser concluída ou abandonada primeiro. Livros em Quero ler podem ser arquivados, mas precisam ser restaurados antes de iniciar a leitura. **Restaurar livro** devolve o item à biblioteca ativa.
 
-A migração v2→v3 adiciona `archivedAt: null` aos livros existentes. Livros arquivados e seu histórico continuam incluídos no backup. O domínio mantém `listBooks()` com todos os livros para consultas históricas e usa `listLibraryBooks()` para filtrar a visibilidade.
+A migração v2→v3 adiciona `archivedAt: null` aos livros existentes. A migração v3→v4 normaliza o gênero legado para `primaryGenre`/`genres[]`, adiciona ISBN, editora e volume de série, e registra `abandonedAt` nas leituras abandonadas. Livros arquivados e seu histórico continuam incluídos no backup. O domínio mantém `listBooks()` com todos os livros para consultas históricas e usa `listLibraryBooks()` para filtrar a visibilidade.
 
 **Excluir permanentemente** apresenta quantidades de leituras, sessões/saldos e avaliações, além do impacto em páginas e conclusões. Oferece exportação de backup e, quando possível, arquivamento como alternativa principal. Exige confirmação explícita; se os registros mudarem desde a abertura, a exclusão é bloqueada até revisar novamente. Não há lixeira: recuperação depende de backup.
 

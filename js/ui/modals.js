@@ -42,9 +42,9 @@ export function openBookFormModal(existingId = null) {
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="f-genre">Gênero</label>
-            <select id="f-genre" name="genre">
-              ${genres.map((g) => `<option value="${g}" ${existing?.genre === g ? "selected" : ""}>${g}</option>`).join("")}
+            <label for="f-genre">Gênero principal</label>
+            <select id="f-genre" name="primaryGenre">
+              ${genres.map((g) => `<option value="${g}" ${(existing?.primaryGenre || existing?.genre) === g ? "selected" : ""}>${g}</option>`).join("")}
             </select>
           </div>
           <div class="field">
@@ -53,6 +53,14 @@ export function openBookFormModal(existingId = null) {
               ${formats.map((f) => `<option value="${f}" ${existing?.format === f ? "selected" : ""}>${f}</option>`).join("")}
             </select>
           </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="f-isbn">ISBN (opcional)</label><input id="f-isbn" name="isbn" value="${esc(existing?.isbn ?? "")}" placeholder="978..." /></div>
+          <div class="field"><label for="f-publisher">Editora (opcional)</label><input id="f-publisher" name="publisher" value="${esc(existing?.publisher ?? "")}" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="f-series">Série (opcional)</label><input id="f-series" name="series" value="${esc(existing?.series ?? "")}" /></div>
+          <div class="field"><label for="f-series-number">Volume</label><input id="f-series-number" name="seriesNumber" type="number" min="1" value="${esc(existing?.seriesNumber ?? "")}" /></div>
         </div>
         <div class="field">
           <label for="f-cover">URL da capa (opcional)</label>

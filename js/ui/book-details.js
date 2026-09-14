@@ -53,7 +53,7 @@ export function bookDetailsHTML(bookId) {
   const readings = listReadingsByBook(book.id);
   const current = openReadingForBook(book.id) || readings[0] || null;
   const pct = current ? progressPercent(current, book) : 0;
-  const meta = [["Autor", authorNamesForBook(book) || "Não informado"], ["Gênero", book.genre || "Não informado"], ["Páginas", book.pages], ["Publicação", book.publicationYear || "Não informada"], ["Formato", book.format || "Não informado"], ["Idioma", book.language || "Não informado"], ["Série", book.series || "Não informada"]];
+  const meta = [["Autor", authorNamesForBook(book) || "Não informado"], ["Gêneros", (book.genres || [book.primaryGenre || book.genre]).filter(Boolean).join(", ") || "Não informado"], ["Páginas", book.pages], ["Publicação", book.publicationYear || "Não informada"], ["Editora", book.publisher || "Não informada"], ["ISBN", book.isbn || "Não informado"], ["Formato", book.format || "Não informado"], ["Idioma", book.language || "Não informado"], ["Série", book.series ? `${book.series}${book.seriesNumber ? ` · vol. ${book.seriesNumber}` : ""}` : "Não informada"]];
   return `<a class="detail-back" href="#/biblioteca">← Voltar à biblioteca</a>
     <div class="page-header"><div><h1 tabindex="-1">${esc(book.title)}</h1><p class="page-subtitle">${esc(authorNamesForBook(book))}</p></div></div>
     ${book.archivedAt ? `<div class="archive-banner" role="status">Arquivado em ${formatDateFullBR(book.archivedAt.slice(0, 10))}. O histórico continua nas estatísticas. Restaure o livro para iniciar outra leitura.</div>` : ""}

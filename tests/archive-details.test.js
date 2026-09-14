@@ -50,6 +50,18 @@ test("leitura em andamento ou pausada bloqueia arquivamento", () => {
   archiveBook(b.id); assert.ok(getBook(b.id).archivedAt);
 });
 
+test("abandono registra data própria e migração v4 normaliza metadados", () => {
+  const b = book("P0");
+  const r = addToWantToRead(b.id);
+  startReading(b.id, { fromReadingId: r.id });
+  abandonReading(r.id, "Ritmo lento");
+  const saved = store.getState().readings[r.id];
+  assert.equal(saved.status, "abandoned");
+  assert.ok(saved.abandonedAt);
+  assert.deepEqual(store.getState().books[b.id].genres, ["Outro"]);
+  assert.equal(migrate(store.getState()).meta.version, 4);
+});
+
 test("arquivar quero ler preserva fila e bloqueia início até restauração", () => {
   reset(); const b = book(); const want = addToWantToRead(b.id);
   archiveBook(b.id);

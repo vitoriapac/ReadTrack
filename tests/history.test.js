@@ -106,7 +106,7 @@ test("anular volume não cria um dia de leitura", () => {
 test("migração preserva total antigo sem inventar datas e é idempotente", () => {
   const old = legacy(), original = JSON.stringify(old);
   const migrated = migrate(old);
-  assert.equal(migrated.meta.version, 3);
+  assert.equal(migrated.meta.version, 4);
   assert.equal(JSON.stringify(old), original);
   assert.deepEqual(migrate(migrated), migrated);
   const volume = readingVolume(migrated);
@@ -129,7 +129,7 @@ test("prévia migra, resume e não altera biblioteca", () => {
   const text = JSON.stringify(legacy());
   setup(); const before = store.exportJSON(), writes = memory.writes;
   const prepared = prepareBackup(text);
-  assert.equal(prepared.sourceVersion, 1); assert.equal(prepared.targetVersion, 3);
+  assert.equal(prepared.sourceVersion, 1); assert.equal(prepared.targetVersion, 4);
   assert.equal(prepared.counts.books, 1); assert.equal(prepared.counts.sessions, 2);
   assert.equal(prepared.undatedPages, 240);
   assert.equal(store.exportJSON(), before); assert.equal(memory.writes, writes);
