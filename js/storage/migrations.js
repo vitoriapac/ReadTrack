@@ -1,8 +1,8 @@
 import { requireValue } from "../utils/validation.js";
 import { validateState } from "./schema.js";
-export const CURRENT_VERSION = 5;
+export const CURRENT_VERSION = 6;
 export function emptyState() {
-  return { meta: { version: CURRENT_VERSION, createdAt: new Date().toISOString(), updatedAt: null }, books: {}, authors: {}, readings: {}, sessions: {}, ratings: {}, goals: {} };
+  return { meta: { version: CURRENT_VERSION, createdAt: new Date().toISOString(), updatedAt: null }, books: {}, authors: {}, readings: {}, sessions: {}, ratings: {}, goals: {}, annotations: {} };
 }
 const MIGRATIONS = {
   2(state) {
@@ -58,6 +58,13 @@ const MIGRATIONS = {
     validateState(state, 4);
     state.goals ??= {};
     state.meta.version = 5;
+    return state;
+  },
+  5(state) {
+    validateState(state, 5);
+    state.annotations ??= {};
+    for (const session of Object.values(state.sessions)) session.duration ??= null;
+    state.meta.version = 6;
     return state;
   },
 };

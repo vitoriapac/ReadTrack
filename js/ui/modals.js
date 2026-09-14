@@ -159,6 +159,7 @@ export function openProgressModal(book, reading) {
           <label for="p-notes">Notas (opcional)</label>
           <textarea id="p-notes" name="notes" placeholder="Alguma impressão sobre esse trecho..."></textarea>
         </div>
+        <div class="field"><label for="p-duration">Duração em minutos (opcional)</label><input id="p-duration" name="duration" type="number" min="0" step="1" /></div>
         <p class="field-hint">A data pode ser retroativa, a partir do início da leitura. As páginas vão para essa data; a posição atual avança na ordem dos lançamentos. Para corrigir um lançamento existente, use Histórico e correções.</p>
       </form>
     `,
@@ -175,7 +176,7 @@ export function openProgressModal(book, reading) {
           showToast("A página atual não pode ser menor que a última registrada.");
           return;
         }
-        logProgress(reading.id, { currentPage, date: fd.get("date") || todayISO(), notes: fd.get("notes") });
+        logProgress(reading.id, { currentPage, date: fd.get("date") || todayISO(), notes: fd.get("notes"), duration: fd.get("duration") || null });
         closeModal();
         if (currentPage >= book.pages) {
           openCompleteFlow(book, { ...reading, currentPage });

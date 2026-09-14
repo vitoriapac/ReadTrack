@@ -10,7 +10,7 @@ export function prepareBackup(text) {
     state,
     sourceVersion: raw.meta?.version ?? 0,
     targetVersion: CURRENT_VERSION,
-    counts: Object.fromEntries(["books", "authors", "readings", "sessions", "ratings", "goals"].map(key => [key, Object.keys(state[key] || {}).length])),
+    counts: Object.fromEntries(["books", "authors", "readings", "sessions", "ratings", "goals", "annotations"].map(key => [key, Object.keys(state[key] || {}).length])),
     ...readingVolume(state),
   };
 }

@@ -59,7 +59,7 @@ test("abandono registra data própria e migração v4 normaliza metadados", () =
   assert.equal(saved.status, "abandoned");
   assert.ok(saved.abandonedAt);
   assert.deepEqual(store.getState().books[b.id].genres, ["Outro"]);
-  assert.equal(migrate(store.getState()).meta.version, 5);
+  assert.equal(migrate(store.getState()).meta.version, 6);
 });
 
 test("arquivar quero ler preserva fila e bloqueia início até restauração", () => {

@@ -6,6 +6,7 @@ export function resolveRoute(hash) {
   if (hash === "#/biblioteca") return { name: "biblioteca" };
   if (hash === "#/estatisticas") return { name: "estatisticas" };
   if (hash === "#/series") return { name: "series" };
+  if (hash === "#/calendario") return { name: "calendario" };
   if (hash.startsWith("#/livro/")) {
     try {
       const id = decodeURIComponent(hash.slice("#/livro/".length));

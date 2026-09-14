@@ -130,11 +130,12 @@ export function startReading(bookId, { initialPage = 0, startedAt = todayISO(), 
  * páginas e atualiza a página atual da leitura. Nunca sobrescreve o
  * histórico — cada chamada gera um novo registro.
  */
-export function logProgress(readingId, { currentPage, date = todayISO(), notes = "" }) {
+export function logProgress(readingId, { currentPage, date = todayISO(), notes = "", duration = null }) {
   const reading = getReading(readingId);
   requireValue(reading && [STATUS.READING, STATUS.PAUSED].includes(reading.status), "A leitura precisa estar em andamento.");
   sessionDate(date, reading);
   requireValue(typeof notes === "string", "Notas inválidas.");
+  requireValue(duration == null || (Number.isSafeInteger(Number(duration)) && Number(duration) >= 0), "Duração inválida.");
   const newPage = pageNumber(currentPage, getBook(reading.bookId).pages);
   requireValue(newPage > reading.currentPage, "A página deve ser maior que a última registrada.");
   const previousPage = reading.currentPage;
@@ -150,7 +151,7 @@ export function logProgress(readingId, { currentPage, date = todayISO(), notes =
     startPage: previousPage,
     endPage: newPage,
     pagesRead,
-    duration: null,
+    duration: duration == null || duration === "" ? null : Number(duration),
     notes: notes || "",
     createdAt: new Date().toISOString(),
   };

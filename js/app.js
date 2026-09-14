@@ -10,12 +10,14 @@ import { resolveRoute } from "./ui/routes.js";
 import { closeModal } from "./ui/dialog.js";
 import { renderStatisticsPage } from "./ui/statistics.js";
 import { renderSeriesPage } from "./ui/series.js";
+import { renderCalendarPage } from "./ui/calendar.js";
 
 const ROUTES = {
   dashboard: { label: "Visão geral", icon: icons.dashboard, render: renderDashboardPage },
   biblioteca: { label: "Biblioteca", icon: icons.library, render: renderLibraryPage },
   estatisticas: { label: "Estatísticas", icon: icons.dashboard, render: renderStatisticsPage },
   series: { label: "Séries", icon: icons.library, render: renderSeriesPage },
+  calendario: { label: "Calendário", icon: icons.dashboard, render: renderCalendarPage },
 };
 
 let disposePage = null;

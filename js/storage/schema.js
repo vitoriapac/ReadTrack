@@ -7,7 +7,7 @@ const statuses = ["want_to_read", "reading", "paused", "completed", "abandoned"]
 
 export function validateState(state, version) {
   requireValue(object(state) && object(state.meta) && state.meta.version === version, "Metadados inválidos.");
-  for (const key of ["books", "authors", "readings", "sessions", "ratings", ...(version >= 5 ? ["goals"] : [])]) {
+  for (const key of ["books", "authors", "readings", "sessions", "ratings", ...(version >= 5 ? ["goals"] : []), ...(version >= 6 ? ["annotations"] : [])]) {
     requireValue(object(state[key]), "Coleção inválida: " + key);
     for (const [id, item] of Object.entries(state[key])) {
       requireValue(object(item) && item.id === id && /^[a-zA-Z0-9_-]+$/.test(id) && !["__proto__", "constructor", "prototype"].includes(id), "Identificador inválido.");
@@ -15,6 +15,12 @@ export function validateState(state, version) {
         requireValue(item[field] == null || (typeof item[field] === "string" && Number.isFinite(Date.parse(item[field]))), "Data de registro inválida.");
       }
     }
+  }
+  if (version >= 6) for (const a of Object.values(state.annotations)) {
+    requireValue(["note", "quote"].includes(a.type), "Tipo de anotação inválido.");
+    requireValue(typeof a.text === "string" && a.text.trim(), "Texto da anotação inválido.");
+    requireValue(own(state.books, a.bookId), "Livro da anotação inexistente.");
+    requireValue(a.page == null || (Number.isSafeInteger(a.page) && a.page >= 0 && a.page <= state.books[a.bookId].pages), "Página da anotação inválida.");
   }
   if (version >= 5) for (const g of Object.values(state.goals)) {
     requireValue(["books", "pages", "authors", "newAuthors", "readingDays"].includes(g.type), "Tipo de meta inválido.");
@@ -60,6 +66,7 @@ export function validateState(state, version) {
     requireValue(own(state.readings, s.readingId), "Sessão sem leitura.");
     const r = state.readings[s.readingId], max = state.books[r.bookId].pages;
     requireValue(s.notes == null || typeof s.notes === "string", "Notas inválidas.");
+    if (version >= 6) requireValue(s.duration == null || (Number.isSafeInteger(s.duration) && s.duration >= 0), "Duração da sessão inválida.");
     if (version >= 2) {
       requireValue(["reading", "position", "balance"].includes(s.type), "Tipo de sessão inválido.");
       requireValue(Array.isArray(s.revisions), "Auditoria inválida.");
