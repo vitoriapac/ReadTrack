@@ -1,0 +1,7 @@
+import { store } from "../storage/storage.js";
+import { bookRoute } from "./routes.js";
+export function renderSeriesPage(container) {
+  const groups = new Map();
+  Object.values(store.getState().books).filter(b => b.series).forEach(b => { if (!groups.has(b.series)) groups.set(b.series, []); groups.get(b.series).push(b); });
+  container.innerHTML = `<div class="page-header"><div><h1>Séries</h1><div class="page-subtitle">Acompanhe a ordem e o progresso das suas coleções.</div></div></div>${[...groups.entries()].sort().map(([name, books]) => { books.sort((a,b)=>(a.seriesNumber||999)-(b.seriesNumber||999)); const done = books.filter(b => Object.values(store.getState().readings).some(r => r.bookId === b.id && r.status === "completed")).length; return `<div class="card series-card"><div class="card-head"><div class="card-title">${name}</div><strong>${done}/${books.length} concluídos</strong></div><div>${books.map(b => { const status = Object.values(store.getState().readings).find(r=>r.bookId===b.id && !["completed","abandoned"].includes(r.status))?.status || (Object.values(store.getState().readings).some(r=>r.bookId===b.id&&r.status==="completed") ? "Concluído" : "Quero ler"); return `<div class="series-row"><span>${b.seriesNumber || "—"}. <a href="${bookRoute(b.id)}">${b.title}</a></span><span>${status}</span></div>`; }).join("")}</div></div>`; }).join("") || `<div class="empty-state">Adicione uma série aos seus livros para acompanhá-la aqui.</div>`}`;
+}
